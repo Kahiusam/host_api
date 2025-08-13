@@ -1,0 +1,169 @@
+import { useState } from "react";
+import { PricingCard } from "@/components/PricingCard";
+import { HeroSection } from "@/components/HeroSection";
+import { useToast } from "@/hooks/use-toast";
+
+interface PricingPlan {
+  title: string;
+  duration: string;
+  data: string;
+  price: number;
+  isUnlimited: boolean;
+  isPopular?: boolean;
+  account: string;
+}
+
+const pricingPlans: PricingPlan[] = [
+  {
+    title: "Quick Browse",
+    duration: "1 Hour",
+    data: "1.5GB",
+    price: 5,
+    isUnlimited: false,
+    account: "0040185431824"
+  },
+  {
+    title: "Power Hour",
+    duration: "1 Hour",
+    data: "Unlimited",
+    price: 10,
+    isUnlimited: true,
+    account: "0040185431824"
+  },
+  {
+    title: "Extended Session",
+    duration: "2 Hours",
+    data: "Unlimited",
+    price: 15,
+    isUnlimited: true,
+    account: "0040185431824"
+  },
+  {
+    title: "Work Session",
+    duration: "3 Hours",
+    data: "Unlimited",
+    price: 25,
+    isUnlimited: true,
+    account: "0040185431824"
+  },
+  {
+    title: "Half Day",
+    duration: "6 Hours",
+    data: "Unlimited",
+    price: 35,
+    isUnlimited: true,
+    account: "0040185431824"
+  },
+  {
+    title: "Full Day",
+    duration: "12 Hours",
+    data: "Unlimited",
+    price: 40,
+    isUnlimited: true,
+    isPopular: true,
+    account: "0040185431824"
+  },
+  {
+    title: "All Day",
+    duration: "24 Hours",
+    data: "Unlimited",
+    price: 45,
+    isUnlimited: true,
+    account: "0040185431824"
+  },
+  {
+    title: "Weekend",
+    duration: "2 Days",
+    data: "Unlimited",
+    price: 80,
+    isUnlimited: true,
+    account: "0040185431824"
+  },
+  {
+    title: "Weekly Browse",
+    duration: "1 Week",
+    data: "10GB",
+    price: 150,
+    isUnlimited: false,
+    account: "0040185431824"
+  },
+  {
+    title: "Weekly Unlimited",
+    duration: "1 Week",
+    data: "Unlimited",
+    price: 200,
+    isUnlimited: true,
+    account: "0040185431824"
+  },
+  {
+    title: "Monthly Basic",
+    duration: "1 Month",
+    data: "25GB",
+    price: 500,
+    isUnlimited: false,
+    account: "0040185431824"
+  },
+  {
+    title: "Monthly Pro",
+    duration: "1 Month",
+    data: "Unlimited",
+    price: 800,
+    isUnlimited: true,
+    account: "0040185431824"
+  }
+];
+
+const Index = () => {
+  const { toast } = useToast();
+
+  const handlePurchase = (account: string, plan: PricingPlan) => {
+    // For now, we'll show a toast with the purchase info
+    // In a real implementation, this would integrate with a payment system
+    toast({
+      title: "Purchase Initiated",
+      description: `Redirecting to payment for ${plan.title} - Ksh ${plan.price}`,
+    });
+    
+    // Simulate payment redirect or API call
+    console.log("Purchase details:", { account, plan });
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <HeroSection />
+      
+      <section className="py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              Choose Your Plan
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Select the perfect data plan for your needs. From quick browsing to extended work sessions.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {pricingPlans.map((plan, index) => (
+              <PricingCard
+                key={index}
+                plan={plan}
+                onPurchase={handlePurchase}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      <footer className="bg-muted py-8 px-4 text-center">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-muted-foreground">
+            Secure payments • Instant activation • 24/7 support
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default Index;
