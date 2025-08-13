@@ -1,169 +1,401 @@
-import { useState } from "react";
-import { PricingCard } from "@/components/PricingCard";
-import { HeroSection } from "@/components/HeroSection";
-import { useToast } from "@/hooks/use-toast";
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
-interface PricingPlan {
-  title: string;
-  duration: string;
-  data: string;
-  price: number;
-  isUnlimited: boolean;
-  isPopular?: boolean;
-  account: string;
+void main() {
+  runApp(const WiFiConnectApp());
 }
 
-const pricingPlans: PricingPlan[] = [
-  {
-    title: "Quick Browse",
-    duration: "1 Hour",
-    data: "1.5GB",
-    price: 5,
-    isUnlimited: false,
-    account: "0040185431824"
-  },
-  {
-    title: "Power Hour",
-    duration: "1 Hour",
-    data: "Unlimited",
-    price: 10,
-    isUnlimited: true,
-    account: "0040185431824"
-  },
-  {
-    title: "Extended Session",
-    duration: "2 Hours",
-    data: "Unlimited",
-    price: 15,
-    isUnlimited: true,
-    account: "0040185431824"
-  },
-  {
-    title: "Work Session",
-    duration: "3 Hours",
-    data: "Unlimited",
-    price: 25,
-    isUnlimited: true,
-    account: "0040185431824"
-  },
-  {
-    title: "Half Day",
-    duration: "6 Hours",
-    data: "Unlimited",
-    price: 35,
-    isUnlimited: true,
-    account: "0040185431824"
-  },
-  {
-    title: "Full Day",
-    duration: "12 Hours",
-    data: "Unlimited",
-    price: 40,
-    isUnlimited: true,
-    isPopular: true,
-    account: "0040185431824"
-  },
-  {
-    title: "All Day",
-    duration: "24 Hours",
-    data: "Unlimited",
-    price: 45,
-    isUnlimited: true,
-    account: "0040185431824"
-  },
-  {
-    title: "Weekend",
-    duration: "2 Days",
-    data: "Unlimited",
-    price: 80,
-    isUnlimited: true,
-    account: "0040185431824"
-  },
-  {
-    title: "Weekly Browse",
-    duration: "1 Week",
-    data: "10GB",
-    price: 150,
-    isUnlimited: false,
-    account: "0040185431824"
-  },
-  {
-    title: "Weekly Unlimited",
-    duration: "1 Week",
-    data: "Unlimited",
-    price: 200,
-    isUnlimited: true,
-    account: "0040185431824"
-  },
-  {
-    title: "Monthly Basic",
-    duration: "1 Month",
-    data: "25GB",
-    price: 500,
-    isUnlimited: false,
-    account: "0040185431824"
-  },
-  {
-    title: "Monthly Pro",
-    duration: "1 Month",
-    data: "Unlimited",
-    price: 800,
-    isUnlimited: true,
-    account: "0040185431824"
-  }
-];
+/// ======= CONFIG =======
+/// Point this to your Node server from earlier:
+/// • Android emulator -> http://10.0.2.2:3000
+/// • iOS simulator / Desktop -> http://localhost:3000
+const String backendBaseUrl = 'http://10.0.2.2:3000';
 
-const Index = () => {
-  const { toast } = useToast();
-
-  const handlePurchase = (account: string, plan: PricingPlan) => {
-    // For now, we'll show a toast with the purchase info
-    // In a real implementation, this would integrate with a payment system
-    toast({
-      title: "Purchase Initiated",
-      description: `Redirecting to payment for ${plan.title} - Ksh ${plan.price}`,
-    });
-    
-    // Simulate payment redirect or API call
-    console.log("Purchase details:", { account, plan });
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <HeroSection />
-      
-      <section className="py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-foreground mb-4">
-              Choose Your Plan
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Select the perfect data plan for your needs. From quick browsing to extended work sessions.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {pricingPlans.map((plan, index) => (
-              <PricingCard
-                key={index}
-                plan={plan}
-                onPurchase={handlePurchase}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-      
-      <footer className="bg-muted py-8 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-muted-foreground">
-            Secure payments • Instant activation • 24/7 support
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
+const Map<String, dynamic> appConfig = {
+  "recipientAccount": "0040185431824",
+  "contact": {
+    "phone": "+254115277650",
+    "email": "samsonkahiu@gmail.com",
+  },
+  "plans": [
+    {"name": "1 Hour Access (Limited)", "limit": "1.5GB", "duration": "1h", "price": 5},
+    {"name": "1 Hour Access (Unlimited)", "duration": "1h", "price": 10},
+    {"name": "2 Hours Unlimited", "duration": "2h", "price": 15},
+    {"name": "3 Hours Unlimited", "duration": "3h", "price": 25},
+    {"name": "6 Hours Unlimited", "duration": "6h", "price": 35},
+    {"name": "12 Hours Unlimited", "duration": "12h", "price": 40},
+    {"name": "24 Hours Unlimited", "duration": "24h", "price": 45},
+    {"name": "2 Days Unlimited", "duration": "48h", "price": 80},
+    {"name": "1 Week Limited", "limit": "10GB", "duration": "7d", "price": 150},
+    {"name": "1 Week Unlimited", "duration": "7d", "price": 200},
+    {"name": "1 Month Limited", "limit": "25GB", "duration": "30d", "price": 500},
+    {"name": "1 Month Unlimited", "duration": "30d", "price": 800},
+  ]
 };
 
-export default Index;
+/// ======= MODELS =======
+class Plan {
+  final String name;
+  final String duration; // "1h", "7d", etc
+  final String? limit;   // e.g., "1.5GB" or null for Unlimited
+  final int price;       // KSh
+
+  const Plan({required this.name, required this.duration, this.limit, required this.price});
+
+  factory Plan.fromJson(Map<String, dynamic> j) => Plan(
+        name: j['name'],
+        duration: j['duration'],
+        limit: j['limit'],
+        price: j['price'],
+      );
+}
+
+/// ======= APP =======
+class WiFiConnectApp extends StatelessWidget {
+  const WiFiConnectApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'WiFi Connect',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+      ),
+      home: const HomePage(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+/// ======= HOME PAGE =======
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late final List<Plan> plans;
+  final TextEditingController msisdnCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    plans = (appConfig['plans'] as List)
+        .map((e) => Plan.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    msisdnCtrl.dispose();
+    super.dispose();
+  }
+
+  String? normalizeKenyanMsisdn(String raw) {
+    String v = raw.trim();
+    final zero = RegExp(r'^0\d{9}$'); // 07XXXXXXXX
+    final plus = RegExp(r'^\+254\d{9}$');
+    final intl = RegExp(r'^254\d{9}$');
+
+    if (zero.hasMatch(v)) return '254${v.substring(1)}';
+    if (plus.hasMatch(v)) return v.replaceFirst('+', '');
+    if (intl.hasMatch(v)) return v;
+    return null;
+  }
+
+  Future<void> sendStkPush(Plan plan) async {
+    final normalized = normalizeKenyanMsisdn(msisdnCtrl.text);
+    if (normalized == null) {
+      _snack('Enter a valid Kenyan number like 0712xxxxxx, +2547xxxxxxxx or 2547xxxxxxxx', isError: true);
+      return;
+    }
+
+    final uri = Uri.parse('$backendBaseUrl/stkpush');
+    final payload = {
+      "phoneNumber": normalized,
+      "amount": plan.price,
+      "planName": plan.name,
+    };
+
+    _showProgress('Sending STK push for ${plan.name} (KSh ${plan.price})…');
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+      Navigator.of(context).pop(); // close dialog
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        _snack('STK push sent to $normalized. Check your phone to authorize.');
+      } else {
+        final body = res.body.isNotEmpty ? res.body : 'Unknown error';
+        _snack('STK failed: ${res.statusCode} $body', isError: true);
+      }
+    } catch (e) {
+      Navigator.of(context).pop(); // close dialog
+      _snack('Network error: $e', isError: true);
+    }
+  }
+
+  void _showProgress(String text) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(
+                height: 28,
+                width: 28,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: Text(text)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _snack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recipient = appConfig['recipientAccount'];
+    final contact = Map<String, String>.from(appConfig['contact']);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('WiFi Connect'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: Center(
+              child: Text(
+                'Account Ref: $recipient',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Hero + Phone Entry
+          Card(
+            elevation: 1,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.wifi, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 8),
+                      Text('Fast & Secure WiFi Access',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Buy instant internet access and pay with M-Pesa STK Push. Simple, quick, and secure.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: msisdnCtrl,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: 'M-Pesa Phone Number',
+                            hintText: 'e.g. 0712345678',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.tonal(
+                        onPressed: () {
+                          if (msisdnCtrl.text.isEmpty) {
+                            msisdnCtrl.text = '07';
+                          }
+                        },
+                        child: const Text('Kenyan format'),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'We’ll send an STK push to this number when you choose a plan.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Plans Grid
+          Text('Choose Your Plan', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Responsive columns: 1, 2, or 3
+              int cols = 1;
+              if (constraints.maxWidth >= 600) cols = 2;
+              if (constraints.maxWidth >= 980) cols = 3;
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: plans.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: cols,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.25,
+                ),
+                itemBuilder: (_, i) => _PlanCard(
+                  plan: plans[i],
+                  onBuy: () => sendStkPush(plans[i]),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // Footer / Contact
+          Card(
+            elevation: 0,
+            color: Colors.grey.shade100,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Wrap(
+                runSpacing: 6,
+                spacing: 24,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text('Contact', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  InkWell(
+                    onTap: () => launchUrl(Uri.parse('tel:${contact["phone"]}')),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.phone, size: 18),
+                        const SizedBox(width: 6),
+                        Text(contact['phone']!),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => launchUrl(Uri.parse('mailto:${contact["email"]}')),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.email, size: 18),
+                        const SizedBox(width: 6),
+                        Text(contact['email']!),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('© 2025 WiFi Connect', style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ======= PLAN CARD WIDGET =======
+class _PlanCard extends StatelessWidget {
+  final Plan plan;
+  final VoidCallback onBuy;
+  const _PlanCard({required this.plan, required this.onBuy});
+
+  bool get isUnlimited => (plan.limit == null);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title + Badge
+            Row(
+              children: [
+                Expanded(
+                  child: Text(plan.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                if (isUnlimited)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF2FF),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text('Unlimited', style: TextStyle(color: Color(0xFF4338CA), fontSize: 12)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Duration: ${plan.duration}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700)),
+            Text('Limit: ${plan.limit ?? "Unlimited"}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700)),
+            const Spacer(),
+            Row(
+              children: [
+                Text('KSh ${plan.price}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: const Color(0xFF2563EB),
+                  fontWeight: FontWeight.w800,
+                )),
+                const Spacer(),
+                FilledButton.icon(
+                  onPressed: onBuy,
+                  icon: const Icon(Icons.credit_card),
+                  label: const Text('Buy Now'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
